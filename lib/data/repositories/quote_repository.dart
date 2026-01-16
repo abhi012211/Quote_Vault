@@ -18,6 +18,7 @@ class QuoteRepository {
     int pageSize = 20,
     String? category,
     String? searchQuery,
+    String? author,
   }) async {
     try {
       final user = _supabase.auth.currentUser;
@@ -26,6 +27,10 @@ class QuoteRepository {
 
       if (category != null) {
         query = query.eq('category', category);
+      }
+
+      if (author != null) {
+        query = query.eq('author', author);
       }
 
       if (searchQuery != null && searchQuery.isNotEmpty) {
@@ -166,6 +171,27 @@ class QuoteRepository {
     }
   }
 
+  Future<void> removeFromCollection(String collectionId, String quoteId) async {
+    try {
+      await _supabase.from('collection_items').delete().match({
+        'collection_id': collectionId,
+        'quote_id': quoteId,
+      });
+    } catch (e) {
+      throw Exception('Error removing from collection: $e');
+    }
+  }
+
+  Future<void> deleteCollection(String collectionId) async {
+    try {
+      // Items will cascade delete if foreign keys are set up correctly,
+      // otherwise verify schema. Assuming cascade delete on FK.
+      await _supabase.from('collections').delete().eq('id', collectionId);
+    } catch (e) {
+      throw Exception('Error deleting collection: $e');
+    }
+  }
+
   Future<List<Quote>> getQuotesInCollection(String collectionId) async {
     try {
       final response = await _supabase
@@ -249,6 +275,7 @@ class QuoteRepository {
         await WidgetService.updateWidget(
           quoteData['content'],
           quoteData['author'],
+          quoteData['id'],
         );
       } catch (_) {}
 

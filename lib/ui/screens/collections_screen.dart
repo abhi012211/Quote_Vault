@@ -42,6 +42,51 @@ class CollectionsScreen extends ConsumerWidget {
                     extra: collection.name,
                   );
                 },
+                onLongPress: () {
+                  showDialog(
+                    context: context,
+                    builder: (context) => AlertDialog(
+                      title: const Text('Delete Collection'),
+                      content: Text(
+                        'Are you sure you want to delete "${collection.name}"? This will remove all quotes from this collection.',
+                      ),
+                      actions: [
+                        TextButton(
+                          onPressed: () => Navigator.pop(context),
+                          child: const Text('Cancel'),
+                        ),
+                        TextButton(
+                          onPressed: () async {
+                            Navigator.pop(context);
+                            try {
+                              await ref
+                                  .read(quoteRepositoryProvider)
+                                  .deleteCollection(collection.id);
+                              ref.invalidate(collectionsProvider);
+                              if (context.mounted) {
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  const SnackBar(
+                                    content: Text('Collection deleted'),
+                                  ),
+                                );
+                              }
+                            } catch (e) {
+                              if (context.mounted) {
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  SnackBar(content: Text('Error: $e')),
+                                );
+                              }
+                            }
+                          },
+                          child: const Text(
+                            'Delete',
+                            style: TextStyle(color: Colors.red),
+                          ),
+                        ),
+                      ],
+                    ),
+                  );
+                },
                 child: Card(
                   color: Theme.of(context).colorScheme.surfaceVariant,
                   child: Column(

@@ -4,32 +4,46 @@ import 'package:go_router/go_router.dart';
 import 'package:quote_vault/data/repositories/auth_repository.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
-class LoginScreen extends ConsumerStatefulWidget {
-  const LoginScreen({super.key});
+class UpdatePasswordScreen extends ConsumerStatefulWidget {
+  const UpdatePasswordScreen({super.key});
 
   @override
-  ConsumerState<LoginScreen> createState() => _LoginScreenState();
+  ConsumerState<UpdatePasswordScreen> createState() =>
+      _UpdatePasswordScreenState();
 }
 
-class _LoginScreenState extends ConsumerState<LoginScreen> {
-  final _emailController = TextEditingController();
+class _UpdatePasswordScreenState extends ConsumerState<UpdatePasswordScreen> {
   final _passwordController = TextEditingController();
+  final _confirmPasswordController = TextEditingController();
   final _formKey = GlobalKey<FormState>();
   bool _isLoading = false;
 
-  Future<void> _signIn() async {
+  Future<void> _updatePassword() async {
     if (!_formKey.currentState!.validate()) return;
+
+    if (_passwordController.text != _confirmPasswordController.text) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Passwords do not match'),
+          backgroundColor: Color(0xFFBA1A1A),
+        ),
+      );
+      return;
+    }
 
     setState(() => _isLoading = true);
     try {
       await ref
           .read(authRepositoryProvider)
-          .signIn(
-            email: _emailController.text.trim(),
-            password: _passwordController.text.trim(),
-          );
+          .updatePassword(_passwordController.text.trim());
       if (mounted) {
-        context.go('/'); // Navigate to home on success
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Password updated successfully!'),
+            backgroundColor: Colors.green,
+          ),
+        );
+        context.go('/'); // Go to home
       }
     } on AuthException catch (e) {
       if (mounted)
@@ -54,14 +68,15 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
 
   @override
   void dispose() {
-    _emailController.dispose();
     _passwordController.dispose();
+    _confirmPasswordController.dispose();
     super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      appBar: AppBar(title: const Text('Update Password')),
       body: Center(
         child: SingleChildScrollView(
           padding: const EdgeInsets.all(24.0),
@@ -71,13 +86,13 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
                 Icon(
-                  Icons.format_quote_rounded,
+                  Icons.password,
                   size: 64,
                   color: Theme.of(context).colorScheme.primary,
                 ),
                 const SizedBox(height: 32),
                 Text(
-                  'Welcome Back',
+                  'Set New Password',
                   style: Theme.of(context).textTheme.headlineMedium?.copyWith(
                     fontWeight: FontWeight.bold,
                     color: Theme.of(context).colorScheme.onSurface,
@@ -86,37 +101,39 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                 ),
                 const SizedBox(height: 32),
                 TextFormField(
-                  controller: _emailController,
-                  decoration: const InputDecoration(
-                    labelText: 'Email',
-                    border: OutlineInputBorder(),
-                    prefixIcon: Icon(Icons.email_outlined),
-                  ),
-                  keyboardType: TextInputType.emailAddress,
-                  validator: (value) {
-                    if (value == null || value.isEmpty)
-                      return 'Please enter your email';
-                    return null;
-                  },
-                ),
-                const SizedBox(height: 16),
-                TextFormField(
                   controller: _passwordController,
                   decoration: const InputDecoration(
-                    labelText: 'Password',
+                    labelText: 'New Password',
                     border: OutlineInputBorder(),
                     prefixIcon: Icon(Icons.lock_outlined),
                   ),
                   obscureText: true,
                   validator: (value) {
                     if (value == null || value.isEmpty)
-                      return 'Please enter your password';
+                      return 'Please enter your new password';
+                    if (value.length < 6)
+                      return 'Password must be at least 6 characters';
+                    return null;
+                  },
+                ),
+                const SizedBox(height: 16),
+                TextFormField(
+                  controller: _confirmPasswordController,
+                  decoration: const InputDecoration(
+                    labelText: 'Confirm Password',
+                    border: OutlineInputBorder(),
+                    prefixIcon: Icon(Icons.lock_outlined),
+                  ),
+                  obscureText: true,
+                  validator: (value) {
+                    if (value == null || value.isEmpty)
+                      return 'Please confirm your new password';
                     return null;
                   },
                 ),
                 const SizedBox(height: 24),
                 FilledButton(
-                  onPressed: _isLoading ? null : _signIn,
+                  onPressed: _isLoading ? null : _updatePassword,
                   child: _isLoading
                       ? const SizedBox(
                           height: 20,
@@ -126,16 +143,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                             color: Colors.white,
                           ),
                         )
-                      : const Text('Login'),
-                ),
-                const SizedBox(height: 16),
-                TextButton(
-                  onPressed: () => context.push('/forgot-password'),
-                  child: const Text('Forgot Password?'),
-                ),
-                TextButton(
-                  onPressed: () => context.push('/signup'),
-                  child: const Text('Don\'t have an account? Sign Up'),
+                      : const Text('Update Password'),
                 ),
               ],
             ),

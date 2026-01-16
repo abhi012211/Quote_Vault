@@ -46,7 +46,17 @@ class AuthRepository {
 
   // Reset Password
   Future<void> resetPassword(String email) async {
-    await _supabase.auth.resetPasswordForEmail(email);
+    await _supabase.auth.resetPasswordForEmail(
+      email,
+      redirectTo: 'io.supabase.quotevault://login-callback',
+    );
+  }
+
+  // Update Password
+  Future<UserResponse> updatePassword(String newPassword) async {
+    return await _supabase.auth.updateUser(
+      UserAttributes(password: newPassword),
+    );
   }
 }
 

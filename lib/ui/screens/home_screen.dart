@@ -178,7 +178,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
           IconButton(
             icon: const Icon(Icons.search),
             onPressed: () {
-              // TODO: Search
+              context.push('/explore');
             },
           ),
           IconButton(
@@ -200,7 +200,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                 data: (quote) => DailyQuoteCard(
                   quote: quote,
                   onTap: () {
-                    // Navigate to detail or show options
+                    context.push('/quote/${quote.id}', extra: quote);
                   },
                 ),
                 error: (e, _) => const SizedBox.shrink(),
@@ -243,6 +243,17 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                             AddToCollectionSheet(quoteId: quote.id),
                       );
                     },
+                    onAuthorTap: () {
+                      context.push(
+                        Uri(
+                          path: '/explore',
+                          queryParameters: {'author': quote.author},
+                        ).toString(),
+                      );
+                    },
+                    onTap: () {
+                      context.push('/quote/${quote.id}', extra: quote);
+                    },
                   );
                 },
               ),
@@ -278,7 +289,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
       ),
       floatingActionButton: FloatingActionButton(
         onPressed: () {
-          // Quick jump to categories
+          context.push('/explore');
         },
         child: const Icon(Icons.category),
       ),

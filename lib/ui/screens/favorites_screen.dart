@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import 'package:quote_vault/data/models/quote.dart';
 import 'package:quote_vault/data/repositories/quote_repository.dart';
 import 'package:quote_vault/ui/widgets/quote_card.dart';
@@ -38,6 +39,9 @@ class FavoritesScreen extends ConsumerWidget {
                         .read(quoteRepositoryProvider)
                         .toggleFavorite(quote.id);
                     ref.invalidate(favoritesProvider); // Refresh list
+                  },
+                  onTap: () {
+                    context.push('/quote/${quote.id}', extra: quote);
                   },
                 ),
               );

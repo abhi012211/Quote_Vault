@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+import 'dart:async';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:quote_vault/data/models/quote.dart';
 import 'core/constants/app_constants.dart';
 import 'core/theme/app_theme.dart';
 import 'ui/screens/login_screen.dart';
@@ -12,9 +14,14 @@ import 'ui/screens/favorites_screen.dart';
 import 'ui/screens/collections_screen.dart';
 import 'ui/screens/collection_detail_screen.dart';
 import 'ui/screens/settings_screen.dart';
+import 'ui/screens/explore_screen.dart';
+import 'ui/screens/quote_detail_screen.dart';
+import 'ui/screens/forgot_password_screen.dart';
+import 'ui/screens/update_password_screen.dart';
 import 'data/repositories/auth_repository.dart';
 import 'data/services/notification_service.dart';
 import 'data/providers/settings_provider.dart';
+import 'data/services/background_service.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 // import 'ui/screens/home_screen.dart'; // Will create this later
 // import 'ui/screens/login_screen.dart'; // Will create this later
@@ -41,6 +48,9 @@ Future<void> main() async {
   // Notifications
   final notificationService = container.read(notificationServiceProvider);
   await notificationService.init();
+
+  // Initialize Background Service for Widget
+  await BackgroundService.initialize();
   // Schedule daily notification immediately for simplicity (in real app check preferences)
   // We can also let SettingsNotifier handle this on load, but init is safe.
   // We used to call schedule here, but now SettingsNotifier does it on load if enabled.
@@ -51,6 +61,14 @@ Future<void> main() async {
       child: const QuoteVaultApp(),
     ),
   );
+
+  // Listen for password recovery
+  Supabase.instance.client.auth.onAuthStateChange.listen((data) {
+    final AuthChangeEvent event = data.event;
+    if (event == AuthChangeEvent.passwordRecovery) {
+      _router.go('/update-password');
+    }
+  });
 }
 
 final _router = GoRouter(
@@ -59,6 +77,27 @@ final _router = GoRouter(
     GoRoute(path: '/', builder: (context, state) => const HomeScreen()),
     GoRoute(path: '/login', builder: (context, state) => const LoginScreen()),
     GoRoute(path: '/signup', builder: (context, state) => const SignUpScreen()),
+    GoRoute(
+      path: '/forgot-password',
+      builder: (context, state) => const ForgotPasswordScreen(),
+    ),
+    GoRoute(
+      path: '/update-password',
+      builder: (context, state) => const UpdatePasswordScreen(),
+    ),
+    GoRoute(
+      path: '/explore',
+      builder: (context, state) {
+        final category = state.uri.queryParameters['category'];
+        final author = state.uri.queryParameters['author'];
+        final query = state.uri.queryParameters['query'];
+        return ExploreScreen(
+          initialCategory: category,
+          initialAuthor: author,
+          initialQuery: query,
+        );
+      },
+    ),
     GoRoute(
       path: '/profile',
       builder: (context, state) => const ProfileScreen(),
@@ -83,6 +122,14 @@ final _router = GoRouter(
         return CollectionDetailScreen(collectionId: id, collectionName: name);
       },
     ),
+    GoRoute(
+      path: '/quote/:id',
+      builder: (context, state) {
+        final id = state.pathParameters['id'];
+        final quote = state.extra as Quote?;
+        return QuoteDetailScreen(quoteId: id, quote: quote);
+      },
+    ),
   ],
   redirect: (context, state) {
     // We need to read the provider to check auth status.
@@ -90,10 +137,15 @@ final _router = GoRouter(
     final container = ProviderScope.containerOf(context);
     final user = container.read(authRepositoryProvider).currentUser;
 
-    final loggingIn = state.uri.path == '/login' || state.uri.path == '/signup';
+    final loggingIn =
+        state.uri.path == '/login' ||
+        state.uri.path == '/signup' ||
+        state.uri.path == '/forgot-password' ||
+        state.uri.path == '/update-password';
 
     if (user == null && !loggingIn) return '/login';
-    if (user != null && loggingIn) return '/';
+    if (user != null && loggingIn && state.uri.path != '/update-password')
+      return '/';
 
     return null;
   },
